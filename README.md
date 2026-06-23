@@ -1,126 +1,128 @@
 # ComfyUI CatsAPI
 
-ComfyUI custom nodes for [CatsAPI / 猫影工坊](https://catsapi.com).
+中文 | [English](README_en.md)
 
-This first version exposes **one public node per supported model**, so each node only shows the parameters that model actually accepts. Shared code handles API auth, task submission, polling, result downloading, and image tensor conversion.
+适用于 [CatsAPI / 猫影工坊](https://catsapi.com) 的 ComfyUI 自定义节点。
 
-## Example
+当前版本采用 **一个模型一个公开节点** 的设计，所以每个节点只显示该模型真实支持的参数，避免把 `size`、`resolution`、`quality` 等不同模型参数混在一起。底层共享同一套 API 鉴权、任务提交、轮询、结果下载和图片 tensor 转换逻辑。
 
-The image nodes return ComfyUI `IMAGE` tensors, so they can be connected directly to `Preview Image`.
+## 示例
 
-![ComfyUI CatsAPI image example](assets/comfyui-image-example.png)
+图片节点会返回 ComfyUI 的 `IMAGE` tensor，可以直接连接到 `Preview Image`。
 
-In the example above:
+![ComfyUI CatsAPI 图片示例](assets/comfyui-image-example.png)
 
-- `CatsAPI GPT Image 2` uses `size` / `quality`.
-- `CatsAPI GrokImage` uses `aspect_ratio`.
-- Both nodes can share a prompt from a `Text String` node.
-- `api_key_override` is optional and can be left empty for local usage.
+上图示例中：
 
-## Nodes
+- `CatsAPI GPT Image 2` 使用 `size` / `quality`。
+- `CatsAPI GrokImage` 使用 `aspect_ratio`。
+- 两个节点可以共用一个 `Text String` 文本提示词节点。
+- `api_key_override` 是可选输入，本地使用时通常留空。
 
-### Image Nodes
+## 节点列表
 
-| Node | Inputs |
+### 图片节点
+
+| 节点 | 输入 |
 |---|---|
-| `CatsAPI GPT Image 2` | `prompt`, `size`, `quality`, `num_images`, `max_coins`, optional `reference_image`, optional `api_key_override` |
-| `CatsAPI Nano Banana 2` | `prompt`, `resolution`, `aspect_ratio`, `num_images`, `max_coins`, optional `reference_image`, optional `api_key_override` |
-| `CatsAPI Nano Banana Pro` | `prompt`, `resolution`, `aspect_ratio`, `num_images`, `max_coins`, optional `reference_image`, optional `api_key_override` |
-| `CatsAPI FLUX.2 Pro` | `prompt`, `aspect_ratio`, `max_coins`, optional `reference_image`, optional `api_key_override` |
-| `CatsAPI GrokImage` | `prompt`, `aspect_ratio`, `num_images`, `max_coins`, optional `reference_image`, optional `api_key_override` |
+| `CatsAPI GPT Image 2` | `prompt`、`size`、`quality`、`num_images`、`max_coins`、可选 `reference_image`、可选 `api_key_override` |
+| `CatsAPI Nano Banana 2` | `prompt`、`resolution`、`aspect_ratio`、`num_images`、`max_coins`、可选 `reference_image`、可选 `api_key_override` |
+| `CatsAPI Nano Banana Pro` | `prompt`、`resolution`、`aspect_ratio`、`num_images`、`max_coins`、可选 `reference_image`、可选 `api_key_override` |
+| `CatsAPI FLUX.2 Pro` | `prompt`、`aspect_ratio`、`max_coins`、可选 `reference_image`、可选 `api_key_override` |
+| `CatsAPI GrokImage` | `prompt`、`aspect_ratio`、`num_images`、`max_coins`、可选 `reference_image`、可选 `api_key_override` |
 
-Image nodes return:
+图片节点输出：
 
-- `images`: ComfyUI `IMAGE` tensor
-- `file_paths`: JSON list of downloaded local files
-- `cost_coins`: consumed cat coins
+- `images`：ComfyUI `IMAGE` tensor
+- `file_paths`：本地下载文件路径 JSON 列表
+- `cost_coins`：本次消耗猫币
 - `task_id`
-- `metadata`: JSON object
+- `metadata`：JSON 元信息
 
-### Video Nodes
+### 视频节点
 
-| Node | Inputs |
+| 节点 | 输入 |
 |---|---|
-| `CatsAPI Seedance 2.0` | `prompt`, `resolution`, `duration`, `aspect_ratio`, `max_coins`, optional `start_image`, optional `end_image`, optional `reference_images`, optional `api_key_override` |
-| `CatsAPI GrokImageVideo` | `prompt`, `resolution`, `duration`, `aspect_ratio`, `max_coins`, optional `start_image`, optional `api_key_override` |
+| `CatsAPI Seedance 2.0` | `prompt`、`resolution`、`duration`、`aspect_ratio`、`max_coins`、可选 `start_image`、可选 `end_image`、可选 `reference_images`、可选 `api_key_override` |
+| `CatsAPI GrokImageVideo` | `prompt`、`resolution`、`duration`、`aspect_ratio`、`max_coins`、可选 `start_image`、可选 `api_key_override` |
 
-Video nodes save generated `.mp4` files into ComfyUI's output directory under `catsapi/` and return:
+视频节点会把生成的 `.mp4` 保存到 ComfyUI 输出目录的 `catsapi/` 子目录，并返回：
 
 - `video_path`
 - `cost_coins`
 - `task_id`
 - `metadata`
 
-## API Key
+## API Key 配置
 
-There are two supported ways to configure a CatsAPI key.
+支持两种配置方式。
 
-### Method 1: Global Key For Local ComfyUI
+### 方式一：本地 / 私有 ComfyUI 使用全局 Key
 
-Recommended for your own machine or a private ComfyUI server.
+适合自己的电脑或私有 ComfyUI 服务器。
 
-Set an environment variable before starting ComfyUI:
+启动 ComfyUI 前设置环境变量：
 
 ```bash
 export CATSAPI_API_KEY=cats-your-key
 python main.py
 ```
 
-If ComfyUI does not inherit shell environment variables, the nodes also statically read:
+如果 ComfyUI 没有继承 shell 环境变量，节点还会静态读取：
 
-- this custom node folder's `.env`
-- ComfyUI current working directory `.env`
+- 本自定义节点目录下的 `.env`
+- ComfyUI 启动目录下的 `.env`
 - `~/.catsapi.env`
 - `~/.zshrc`
 - `~/.bashrc`
 - `~/.profile`
 - `~/.bash_profile`
 
-Supported config file formats:
+配置文件支持下面两种写法：
 
 ```bash
 CATSAPI_API_KEY=cats-your-key
 export CATSAPI_API_KEY="cats-your-key"
 ```
 
-Optional custom backend:
+可选自建后端：
 
 ```bash
 export CATSAPI_BASE=https://catsapi.com
 ```
 
-### Method 2: Runtime Key Override For Hosted Platforms
+### 方式二：RunningHub 等公共平台使用运行时覆盖
 
-Recommended for public or hosted ComfyUI platforms such as RunningHub, where users may not control server environment variables.
+适合 RunningHub 这类用户无法控制服务器环境变量的公共 / 托管 ComfyUI 平台。
 
-Every node has an optional `api_key_override` input:
+每个节点都有可选输入 `api_key_override`：
 
-- Leave it empty for local/private ComfyUI usage.
-- Fill it only when the platform cannot provide secrets through environment variables.
-- The override is used only for the current node execution.
-- The override is never written to `metadata`.
-- Truncated keys containing `...` or `…` are rejected before any request is sent.
+- 本地或私有 ComfyUI 使用时留空即可。
+- 只有平台无法通过环境变量提供密钥时才填写。
+- 该值只用于当前节点执行。
+- 该值不会写入 `metadata`。
+- 包含 `...` 或 `…` 的截断 Key 会在发请求前被拒绝。
 
-Important: ComfyUI workflow JSON may save widget values. Do not publish or share workflows with `api_key_override` filled in.
+注意：ComfyUI workflow JSON 可能保存 widget 值。不要发布或分享填了 `api_key_override` 的工作流。
 
-## Spending Guard
+## 花费保护
 
-`max_coins=0` means no spending cap. Any positive value previews cost first and cancels if the task would exceed it.
+`max_coins=0` 表示不限制花费。设置为正数时，节点会先预估花费；如果超过上限，会取消提交任务。
 
-## Result Handling
+## 结果处理
 
-- Image results are downloaded locally and converted into ComfyUI `IMAGE` tensors.
-- Video results are downloaded locally and returned as a `video_path`.
-- Internal CatsAPI result URLs are not returned as user-facing outputs.
-- The downloader uses browser-like headers and a `curl` fallback to avoid CDN bot-check issues where possible.
+- 图片结果会先下载到本地，再转换为 ComfyUI `IMAGE` tensor。
+- 视频结果会下载到本地，并以 `video_path` 返回。
+- 不把 CatsAPI 内部结果 URL 作为用户可见输出。
+- 下载器使用浏览器类 headers，并带 `curl` fallback，尽量避开 CDN 机器人检测导致的下载失败。
 
-## Installation
+## 安装
 
-Clone this repository into ComfyUI's `custom_nodes` directory:
+克隆到 ComfyUI 的 `custom_nodes` 目录：
 
 ```bash
 cd ComfyUI/custom_nodes
 git clone https://github.com/maodeyu180/ComfyUI_Catsapi.git
 ```
 
-Restart ComfyUI after installation or updates.
+安装或更新后重启 ComfyUI。
