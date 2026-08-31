@@ -21,9 +21,11 @@ def tensor_to_image_inputs(image_tensor, *, max_images: int, name_prefix: str) -
         array = array[None, ...]
     if array.ndim != 4:
         raise ValueError("IMAGE 输入必须是 [B,H,W,C] 或 [H,W,C] 格式")
+    if len(array) > max_images:
+        raise ValueError(f"Too many reference images: received {len(array)}, maximum {max_images}.")
 
     out: list[dict] = []
-    for idx, img in enumerate(array[:max_images]):
+    for idx, img in enumerate(array):
         img = np.clip(img, 0.0, 1.0)
         if img.shape[-1] == 1:
             img = np.repeat(img, 3, axis=-1)

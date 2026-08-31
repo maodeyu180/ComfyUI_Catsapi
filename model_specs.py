@@ -1,5 +1,7 @@
 IMAGE_SIZES_GPT2 = [
     "1024x1024",
+    "1280x1024",
+    "1024x1280",
     "1536x1024",
     "1024x1536",
     "2048x2048",
@@ -7,10 +9,16 @@ IMAGE_SIZES_GPT2 = [
     "1152x2048",
     "2048x1536",
     "1536x2048",
+    "2560x1440",
+    "1440x2560",
     "3840x2160",
     "2160x3840",
+    "3824x2144",
+    "2144x3824",
     "3840x1280",
     "1280x3840",
+    "2688x1152",
+    "1152x2688",
 ]
 
 NANO_BANANA2_ASPECT_RATIOS = [
@@ -76,3 +84,11 @@ GPT2_QUALITY = ["auto", "low", "medium", "high"]
 
 SEEDANCE20_DURATIONS = [str(item) for item in range(4, 16)]
 GROK_VIDEO_DURATIONS = [str(item) for item in range(5, 16)]
+
+# Main-site worker limit for start + references + end, despite schema maxFiles=9.
+SEEDANCE20_REFERENCE_IMAGE_LIMIT = 4
+
+SEEDANCE_MODELS = {"seedance20", "seedance20Mini"}
+SEEDREAM5_IMAGE_SIZES = ["square", "portrait_4_3", "landscape_4_3", "portrait_16_9", "landscape_16_9"]
+GEMINI_OMNI_ASPECT_RATIOS = ["16:9", "9:16"]
+GEMINI_OMNI_DURATIONS = [str(item) for item in range(5, 11)]

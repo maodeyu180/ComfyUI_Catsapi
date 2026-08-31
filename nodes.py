@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import math
 import time
 from pathlib import Path
 
@@ -15,6 +16,8 @@ from .catsapi_client import (
 from .image_utils import image_paths_to_tensor, tensor_to_image_inputs
 from .model_specs import (
     FLUX2_PRO_ASPECT_RATIOS,
+    GEMINI_OMNI_ASPECT_RATIOS,
+    GEMINI_OMNI_DURATIONS,
     GPT2_QUALITY,
     GROK_IMAGE_ASPECT_RATIOS,
     GROK_VIDEO_ASPECT_RATIOS,
@@ -26,6 +29,9 @@ from .model_specs import (
     NANO_BANANA_PRO_ASPECT_RATIOS,
     SEEDANCE20_ASPECT_RATIOS,
     SEEDANCE20_DURATIONS,
+    SEEDANCE20_REFERENCE_IMAGE_LIMIT,
+    SEEDANCE_MODELS,
+    SEEDREAM5_IMAGE_SIZES,
     VIDEO_RESOLUTIONS,
 )
 
@@ -60,12 +66,13 @@ def _metadata(task: dict, paths: list[Path], model: str, params: dict) -> tuple[
 
 
 def _check_max_coins(cost_data: dict, max_coins: int) -> None:
-    total = int(cost_data.get("total_cost") or 0)
+    total = cost_data.get("total_cost")
+    if isinstance(total, bool) or not isinstance(total, (int, float)) or not math.isfinite(total) or total < 0:
+        raise CatsAPIError("Invalid cost preview; task was not submitted.")
+    if cost_data.get("sufficient") is not True:
+        raise CatsAPIError("Insufficient balance or incomplete cost preview; task was not submitted.")
     if max_coins and total > max_coins:
         raise CatsAPIError(f"费用预览为 {total} 猫币,超过 max_coins={max_coins},已取消提交。")
-    if cost_data.get("sufficient") is False:
-        balance = int(cost_data.get("balance") or 0)
-        raise CatsAPIError(f"猫币余额不足: 预计需要 {total} 猫币,当前余额 {balance} 猫币。")
 
 
 def _output_path(model: str, ext: str) -> Path:
@@ -175,6 +182,11 @@ def _generate_video(
     )
     if reference_inputs:
         files["referenceImages"] = reference_inputs
+    if model in SEEDANCE_MODELS:
+        combined = start_inputs + reference_inputs + end_inputs
+        if len(combined) > SEEDANCE20_REFERENCE_IMAGE_LIMIT:
+            raise CatsAPIError("Seedance 2.0 / Mini accept at most 4 images in total (start + references + end).")
+        files = {"referenceImages": combined} if combined else {}
 
     cost_data = preview_cost(
         model=model,
@@ -250,7 +262,7 @@ class CatsAPIGPTImage2:
             num_images=num_images,
             max_coins=max_coins,
             reference_image=reference_image,
-            max_reference_images=4,
+            max_reference_images=16,
             cost_resolution=size,
             cost_mode=quality,
             api_key_override=api_key_override,
@@ -276,6 +288,7 @@ class CatsAPINanoBanana2:
             "optional": {
                 "reference_image": ("IMAGE",),
                 "api_key_override": _api_key_override_input(),
+                "enable_web_search": ("BOOLEAN", {"default": True}),
             },
         }
 
@@ -288,8 +301,10 @@ class CatsAPINanoBanana2:
         max_coins,
         reference_image=None,
         api_key_override="",
+        enable_web_search=True,
     ):
-        params = {"resolution": resolution, "aspectRatio": aspect_ratio, "rewritePrompt": False}
+        params = {"resolution": resolution, "aspectRatio": aspect_ratio,
+                  "rewritePrompt": False, "enableWebSearch": enable_web_search}
         return _generate_image(
             model="nanoBanana2",
             prompt=prompt,
@@ -297,7 +312,7 @@ class CatsAPINanoBanana2:
             num_images=num_images,
             max_coins=max_coins,
             reference_image=reference_image,
-            max_reference_images=4,
+            max_reference_images=14,
             cost_resolution=resolution,
             api_key_override=api_key_override,
         )
@@ -314,7 +329,7 @@ class CatsAPINanoBananaPro:
         return {
             "required": {
                 "prompt": _prompt_input(),
-                "resolution": (IMAGE_RESOLUTIONS_NANO_PRO, {"default": "2K"}),
+                "resolution": (IMAGE_RESOLUTIONS_NANO_PRO, {"default": "1K"}),
                 "aspect_ratio": (NANO_BANANA_PRO_ASPECT_RATIOS, {"default": "1:1"}),
                 "num_images": ("INT", {"default": 1, "min": 1, "max": 4, "step": 1}),
                 "max_coins": _max_coins_input(),
@@ -322,6 +337,7 @@ class CatsAPINanoBananaPro:
             "optional": {
                 "reference_image": ("IMAGE",),
                 "api_key_override": _api_key_override_input(),
+                "enable_web_search": ("BOOLEAN", {"default": True}),
             },
         }
 
@@ -334,8 +350,10 @@ class CatsAPINanoBananaPro:
         max_coins,
         reference_image=None,
         api_key_override="",
+        enable_web_search=True,
     ):
-        params = {"resolution": resolution, "aspectRatio": aspect_ratio, "rewritePrompt": False}
+        params = {"resolution": resolution, "aspectRatio": aspect_ratio,
+                  "rewritePrompt": False, "enableWebSearch": enable_web_search}
         return _generate_image(
             model="nanoBananaPro",
             prompt=prompt,
@@ -384,6 +402,7 @@ class CatsAPIFLUX2Pro:
 
 
 class CatsAPIGrokImage:
+    MODEL_KEY = "grokImagineImage"
     CATEGORY = CATEGORY_IMAGE
     FUNCTION = "generate"
     RETURN_TYPES = ("IMAGE", "STRING", "INT", "STRING", "STRING")
@@ -415,7 +434,7 @@ class CatsAPIGrokImage:
     ):
         params = {"aspectRatio": aspect_ratio, "rewritePrompt": False}
         return _generate_image(
-            model="grokImagineImage",
+            model=self.MODEL_KEY,
             prompt=prompt,
             params=params,
             num_images=num_images,
@@ -426,7 +445,56 @@ class CatsAPIGrokImage:
         )
 
 
+class CatsAPIGrokImage2(CatsAPIGrokImage):
+    MODEL_KEY = "grokImagineImage2"
+
+
+class _CatsAPISeedream5:
+    CATEGORY = CATEGORY_IMAGE
+    FUNCTION = "generate"
+    RETURN_TYPES = ("IMAGE", "STRING", "INT", "STRING", "STRING")
+    RETURN_NAMES = ("images", "file_paths", "cost_coins", "task_id", "metadata")
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompt": _prompt_input(),
+                "image_size": (SEEDREAM5_IMAGE_SIZES, {"default": "square"}),
+                "num_images": ("INT", {"default": 1, "min": 1, "max": 4, "step": 1}),
+                "max_coins": _max_coins_input(),
+            },
+            "optional": {
+                "reference_image": ("IMAGE",),
+                "api_key_override": _api_key_override_input(),
+                "seed": ("INT", {"default": -1, "min": -1, "max": 2147483647}),
+            },
+        }
+
+    def generate(self, prompt, image_size, num_images, max_coins,
+                 reference_image=None, api_key_override="", seed=-1):
+        params = {"imageSize": image_size, "rewritePrompt": False}
+        if seed >= 0:
+            params["seed"] = seed
+        return _generate_image(
+            model=self.MODEL_KEY, prompt=prompt, params=params,
+            num_images=num_images, max_coins=max_coins,
+            reference_image=reference_image, max_reference_images=4,
+            cost_resolution=image_size, api_key_override=api_key_override,
+        )
+
+
+class CatsAPISeedream5Lite(_CatsAPISeedream5):
+    MODEL_KEY = "seedream5Lite"
+
+
+class CatsAPISeedream5Pro(_CatsAPISeedream5):
+    MODEL_KEY = "seedream5Pro"
+
+
 class CatsAPISeedance20:
+    MODEL_KEY = "seedance20"
+    GENERATION_MODE = "fast"
     CATEGORY = CATEGORY_VIDEO
     FUNCTION = "generate"
     RETURN_TYPES = ("STRING", "INT", "STRING", "STRING")
@@ -438,8 +506,8 @@ class CatsAPISeedance20:
         return {
             "required": {
                 "prompt": _prompt_input(),
-                "resolution": (VIDEO_RESOLUTIONS, {"default": "720p"}),
-                "duration": (SEEDANCE20_DURATIONS, {"default": "5"}),
+                "resolution": (VIDEO_RESOLUTIONS, {"default": "480p"}),
+                "duration": (SEEDANCE20_DURATIONS, {"default": "8"}),
                 "aspect_ratio": (SEEDANCE20_ASPECT_RATIOS, {"default": "16:9"}),
                 "max_coins": _max_coins_input(),
             },
@@ -464,15 +532,16 @@ class CatsAPISeedance20:
         api_key_override="",
     ):
         params = {
-            "inputMode": "standard",
+            "inputMode": "reference",
             "resolution": resolution,
             "duration": duration,
             "aspectRatio": aspect_ratio,
-            "mode": "fast",
             "rewritePrompt": False,
         }
+        if self.GENERATION_MODE:
+            params["mode"] = self.GENERATION_MODE
         return _generate_video(
-            model="seedance20",
+            model=self.MODEL_KEY,
             prompt=prompt,
             params=params,
             max_coins=max_coins,
@@ -481,8 +550,45 @@ class CatsAPISeedance20:
             reference_images=reference_images,
             cost_resolution=resolution,
             cost_duration=duration,
-            cost_mode="fast",
+            cost_mode=self.GENERATION_MODE,
             api_key_override=api_key_override,
+        )
+
+
+class CatsAPISeedance20Mini(CatsAPISeedance20):
+    MODEL_KEY = "seedance20Mini"
+    GENERATION_MODE = None
+
+
+class CatsAPIGeminiOmniFlash:
+    CATEGORY = CATEGORY_VIDEO
+    FUNCTION = "generate"
+    RETURN_TYPES = ("STRING", "INT", "STRING", "STRING")
+    RETURN_NAMES = ("video_path", "cost_coins", "task_id", "metadata")
+    OUTPUT_NODE = True
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompt": _prompt_input(),
+                "duration": (GEMINI_OMNI_DURATIONS, {"default": "5"}),
+                "aspect_ratio": (GEMINI_OMNI_ASPECT_RATIOS, {"default": "16:9"}),
+                "max_coins": _max_coins_input(),
+            },
+            "optional": {
+                "start_image": ("IMAGE",),
+                "api_key_override": _api_key_override_input(),
+            },
+        }
+
+    def generate(self, prompt, duration, aspect_ratio, max_coins,
+                 start_image=None, api_key_override=""):
+        return _generate_video(
+            model="geminiOmniFlash", prompt=prompt,
+            params={"duration": duration, "aspectRatio": aspect_ratio, "rewritePrompt": False},
+            max_coins=max_coins, start_image=start_image,
+            cost_duration=duration, api_key_override=api_key_override,
         )
 
 
@@ -498,8 +604,8 @@ class CatsAPIGrokImageVideo:
         return {
             "required": {
                 "prompt": _prompt_input(),
-                "resolution": (VIDEO_RESOLUTIONS, {"default": "480p"}),
-                "duration": (GROK_VIDEO_DURATIONS, {"default": "5"}),
+                "resolution": (VIDEO_RESOLUTIONS, {"default": "720p"}),
+                "duration": (GROK_VIDEO_DURATIONS, {"default": "8"}),
                 "aspect_ratio": (GROK_VIDEO_ASPECT_RATIOS, {"default": "1:1"}),
                 "max_coins": _max_coins_input(),
             },

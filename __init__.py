@@ -1,11 +1,16 @@
 from .nodes import (
     CatsAPIFLUX2Pro,
     CatsAPIGPTImage2,
+    CatsAPIGeminiOmniFlash,
     CatsAPIGrokImage,
+    CatsAPIGrokImage2,
     CatsAPIGrokImageVideo,
     CatsAPINanoBanana2,
     CatsAPINanoBananaPro,
     CatsAPISeedance20,
+    CatsAPISeedance20Mini,
+    CatsAPISeedream5Lite,
+    CatsAPISeedream5Pro,
 )
 
 NODE_CLASS_MAPPINGS = {
@@ -16,6 +21,11 @@ NODE_CLASS_MAPPINGS = {
     "CatsAPIGrokImage": CatsAPIGrokImage,
     "CatsAPISeedance20": CatsAPISeedance20,
     "CatsAPIGrokImageVideo": CatsAPIGrokImageVideo,
+    "CatsAPISeedream5Lite": CatsAPISeedream5Lite,
+    "CatsAPISeedream5Pro": CatsAPISeedream5Pro,
+    "CatsAPIGrokImage2": CatsAPIGrokImage2,
+    "CatsAPISeedance20Mini": CatsAPISeedance20Mini,
+    "CatsAPIGeminiOmniFlash": CatsAPIGeminiOmniFlash,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -26,6 +36,11 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "CatsAPIGrokImage": "CatsAPI GrokImage",
     "CatsAPISeedance20": "CatsAPI Seedance 2.0",
     "CatsAPIGrokImageVideo": "CatsAPI GrokImageVideo",
+    "CatsAPISeedream5Lite": "CatsAPI Seedream 5 Lite",
+    "CatsAPISeedream5Pro": "CatsAPI Seedream 5 Pro",
+    "CatsAPIGrokImage2": "CatsAPI Grok Imagine Image 2",
+    "CatsAPISeedance20Mini": "CatsAPI Seedance 2.0 Mini",
+    "CatsAPIGeminiOmniFlash": "CatsAPI Gemini Omni Flash",
 }
 
 __all__ = ["NODE_CLASS_MAPPINGS", "NODE_DISPLAY_NAME_MAPPINGS"]
