@@ -152,4 +152,4 @@ Run `python -m unittest discover -s tests -v` in a project Python environment. T
 ## Related Projects
 
 - [CatsAPI main site](https://catsapi.com)
-- [CatsAPI Agent Skill](https://github.com/maodeyu180/OpenClaw_Catsapi_Skill)
+- [CatsAPI Agent Skill](https://github.com/maodeyu180/CatsAPI-Agent-Skill)

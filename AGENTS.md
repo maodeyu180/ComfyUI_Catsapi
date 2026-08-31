@@ -6,7 +6,7 @@
 
 - 主站：`/Users/yu/Developers/github_personal/personal_projects/ldc_gen_image`。
 - 本仓库：`/Users/yu/Developers/github_personal/catsapi_relation/ComfyUI_Catsapi`；远端 `git@github.com:maodeyu180/ComfyUI_Catsapi.git`。
-- 同级 Agent Skill：`/Users/yu/Developers/github_personal/catsapi_relation/OpenClaw_Catsapi_Skill`。
+- 同级 Agent Skill：`/Users/yu/Developers/github_personal/catsapi_relation/CatsAPI-Agent-Skill`。
 - 本地联合维护规则见上一层 `AGENTS.md`；涉及主站文件时先阅读主站 `AGENTS.md`。
 
 ## 同步入口

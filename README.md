@@ -152,4 +152,4 @@ git clone https://github.com/maodeyu180/ComfyUI_Catsapi.git
 ## 关联项目
 
 - [CatsAPI 主站](https://catsapi.com)
-- [CatsAPI Agent Skill](https://github.com/maodeyu180/OpenClaw_Catsapi_Skill)
+- [CatsAPI Agent Skill](https://github.com/maodeyu180/CatsAPI-Agent-Skill)
